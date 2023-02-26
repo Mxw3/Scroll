@@ -25,7 +25,7 @@ public sealed class WindowsBackgroundService : BackgroundService
                 string joke = _jokeService.GetJoke();
                 _logger.LogWarning("{Joke}", joke);
 
-                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+                await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
             }
         }
         catch (Exception ex)
