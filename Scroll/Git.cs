@@ -1,30 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 
 namespace Scroll;
 
-internal class Git
+public class Git
 {
-    public void Process()
+    public void Process(ILogger<WindowsBackgroundService> logger)
     {
-        if (DateCheck())
+        if (DateCheck(logger))
         {
             var patternData = new PatternData();
-            if (PatternCheck(patternData))
+            if (PatternCheck(logger, patternData))
             {
-                PerformOperations();
+                PerformOperations(logger);
             }
         }
         File.WriteAllText("GitDate.txt", DateTime.UtcNow.ToString("yyyy-MM-dd hh:mm:ss.ffff"));
     }
-    public bool DateCheck()
+    internal bool DateCheck(ILogger<WindowsBackgroundService> logger)
     {
+        logger.LogInformation(@"Changing current directory to D:\source\repos\Scroll");
         Directory.SetCurrentDirectory(@"D:\source\repos\Scroll");
         if (File.Exists("GitDate.txt"))
         {
@@ -37,24 +31,27 @@ internal class Git
         }
         return false;
     }
-    public bool PatternCheck(PatternData patternData)
+    internal bool PatternCheck(ILogger<WindowsBackgroundService> logger, PatternData patternData)
     {
         double start = new DateTime(2023, 02, 26).ToOADate();
         double today = DateTime.UtcNow.Date.ToOADate();
-        int i = (int)(today - start) % patternData.Pattern.Length;
+        int length = patternData.Pattern.Length;
+        int i = (int)(today - start) % length;
+        logger.LogInformation("{i} = ({today} - {start}) % {length}", i, today, start, length);
         return patternData.Pattern[i];
     }
-    public void PerformOperations()
+    internal void PerformOperations(ILogger<WindowsBackgroundService> logger)
     {
+        logger.LogWarning(@"Performing operations");
         for (int i = 0; i < 30; i++)
         {
             File.WriteAllText("GitDate.txt", DateTime.UtcNow.ToString("yyyy-MM-dd hh:mm:ss.ffff"));
-            ExecuteProcess("add -u");
-            ExecuteProcess($"commit -m \"Commit {DateTime.UtcNow}\"");
-            ExecuteProcess("push");
+            ExecuteProcess(logger, "add -u");
+            ExecuteProcess(logger, $"commit -m \"Commit {DateTime.UtcNow}\"");
+            ExecuteProcess(logger, "push");
         }
     }
-    internal void ExecuteProcess(string arguments)
+    internal void ExecuteProcess(ILogger<WindowsBackgroundService> logger, string arguments)
     {
         ProcessStartInfo procStartInfo = new ProcessStartInfo("git", arguments);
         procStartInfo.RedirectStandardOutput = true;
@@ -65,6 +62,10 @@ internal class Git
         process.Start();
         process.WaitForExit();
         string result = process.StandardOutput.ReadToEnd();
+        if (process.ExitCode != 0)
+            logger.LogError("{argument} {result}", arguments, result);
+        else
+            logger.LogInformation("{argument} {result}", arguments, result);
         Console.WriteLine(result);
     }
 }

@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -8,13 +10,13 @@ namespace Scroll;
 
 public sealed class WindowsBackgroundService : BackgroundService
 {
-    private readonly JokeService _jokeService;
+    private readonly Git _git;
     private readonly ILogger<WindowsBackgroundService> _logger;
 
     public WindowsBackgroundService(
-        JokeService jokeService,
+        Git git,
         ILogger<WindowsBackgroundService> logger) =>
-        (_jokeService, _logger) = (jokeService, logger);
+        (_git, _logger) = (git, logger);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -22,8 +24,14 @@ public sealed class WindowsBackgroundService : BackgroundService
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                string joke = _jokeService.GetJoke();
-                _logger.LogWarning("{Joke}", joke);
+                try
+                {
+                    _git.Process(_logger);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex.ToString());
+                }
 
                 await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
             }
